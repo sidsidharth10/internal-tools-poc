@@ -53,6 +53,11 @@ PASS  compliance POST /api/feature-flags                 expected 403, got 403
 PASS  ops DELETE /api/feature-flags/:id                  expected 403, got 403
 PASS  admin DELETE /api/feature-flags/:id                expected 200, got 200
 PASS  audit rows written for the flag                    expected 2, got 2
+PASS  compliance POST /api/refunds/:id/decision          expected 403, got 403
+PASS  ops decides a refund under the limit               expected 200, got 200
+PASS  ops decides a refund over the limit                expected 403, got 403
+PASS  admin decides the same large refund                expected 200, got 200
+PASS  audit row records the status transition            expected pending -> denied, got pending -> denied
 ```
 
 You can reproduce any line by hand with `curl` — bypassing the UI entirely
@@ -137,10 +142,31 @@ change is audited.
 
 ### App 2 — Refunds Dashboard (built mostly)
 
-*Not yet built — next up.* Demonstrates conditional workflow logic rather than
-plain CRUD: server-side filtering over the 5,000+ row dataset, plus an
-approve/deny action gated on both role and value (`ops` under $500, `admin` any
-amount, `compliance` read-only).
+Demonstrates conditional workflow logic rather than plain CRUD. The list at
+`/refunds` filters the 5,200 seeded requests by status, amount range, request
+date range and customer reference, sorts on four columns and pages through the
+result — all in SQL against indexed columns, with a `GROUP BY` summary of counts
+by status for the current filter. The browser holds one page of rows.
+
+The decision step is where the app differs from App 1. `decideRefund()`
+(`src/lib/data/refunds.ts`) refuses a decision unless three conditions hold, all
+checked in the data layer before any write:
+
+- the actor has `refunds.read`;
+- `assertCanDecideRefund()` passes — the rule is value-gated as well as
+  role-gated, so `ops` may decide only below `OPS_REFUND_LIMIT_CENTS` ($500),
+  `admin` may decide any amount, and `compliance` may never decide;
+- the request is still `pending`, so a decided refund cannot be quietly
+  overwritten — a second decision is a 409, not a silent update.
+
+The write goes through `auditedMutate()` as `refund.approve` / `refund.deny`, so
+the audit log carries the before/after snapshots of the status transition and the
+deciding user.
+
+The UI disables the buttons for `compliance`, but deliberately leaves them
+clickable for `ops` on over-limit rows: clicking one surfaces the API's own 403
+("ops may only decide refunds under 500 USD") above the table, which is the point
+— the server is the thing saying no.
 
 ### App 3 — KYC Review Queue (built thin, on purpose)
 

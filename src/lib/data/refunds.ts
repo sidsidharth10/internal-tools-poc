@@ -5,6 +5,7 @@ import { auditedMutate } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { refundStatusSchema, type RefundStatus } from "@/lib/domain";
 import {
+  ConflictError,
   NotFoundError,
   assertCanDecideRefund,
   requirePermission,
@@ -195,14 +196,6 @@ export const refundDecisionSchema = z.object({
 
 export type RefundDecision = z.infer<typeof refundDecisionSchema>["decision"];
 
-export class InvalidTransitionError extends Error {
-  readonly status = 409;
-  constructor(message: string) {
-    super(message);
-    this.name = "InvalidTransitionError";
-  }
-}
-
 /**
  * The workflow step that differentiates this app from CRUD: a decision is gated on
  * the actor's role *and* on the value of the request, and is only legal from
@@ -221,7 +214,7 @@ export async function decideRefund(
   assertCanDecideRefund(actor, refund.amountCents);
 
   if (refund.status !== "pending") {
-    throw new InvalidTransitionError(
+    throw new ConflictError(
       `Refund ${refund.customerRef} is already ${refund.status} and cannot be decided again`,
     );
   }
