@@ -5,6 +5,7 @@ import { auditedMutate } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { environmentSchema } from "@/lib/domain";
 import {
+  ConflictError,
   NotFoundError,
   requirePermission,
   type ActorContext,
@@ -101,7 +102,7 @@ export async function getFeatureFlag(actor: ActorContext, id: string) {
   return flag;
 }
 
-export const featureFlagInputSchema = z.object({
+const featureFlagFields = z.object({
   key: z
     .string()
     .trim()
@@ -109,12 +110,53 @@ export const featureFlagInputSchema = z.object({
     .max(80)
     .regex(/^[a-z0-9_.-]+$/, "Use lowercase letters, numbers, . _ -"),
   name: z.string().trim().min(2).max(120),
-  description: z.string().trim().max(500).default(""),
-  enabled: z.boolean().default(false),
+  description: z.string().trim().max(500),
+  enabled: z.boolean(),
   environment: environmentSchema,
 });
 
+export const featureFlagInputSchema = featureFlagFields.extend({
+  description: featureFlagFields.shape.description.default(""),
+  enabled: featureFlagFields.shape.enabled.default(false),
+});
+
+/**
+ * Built from the undefaulted fields: `.partial()` keeps a field's `.default()`,
+ * so patching from the defaulted schema would write those defaults over columns
+ * the caller never mentioned.
+ */
+export const featureFlagPatchSchema = featureFlagFields.partial();
+
 export type FeatureFlagInput = z.infer<typeof featureFlagInputSchema>;
+export type FeatureFlagPatch = z.infer<typeof featureFlagPatchSchema>;
+
+/**
+ * Structural rather than `instanceof`: the bundler can load the generated Prisma
+ * runtime more than once, so the thrown error is not always the same class object.
+ */
+function isUniqueConstraintError(
+  error: unknown,
+): error is Prisma.PrismaClientKnownRequestError {
+  return (
+    error instanceof Error &&
+    error.name === "PrismaClientKnownRequestError" &&
+    "code" in error &&
+    error.code === "P2002"
+  );
+}
+
+async function withKeyConflict<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      throw new ConflictError(
+        "A feature flag with that key already exists in this environment.",
+      );
+    }
+    throw error;
+  }
+}
 
 export async function createFeatureFlag(
   actor: ActorContext,
@@ -122,46 +164,50 @@ export async function createFeatureFlag(
 ) {
   requirePermission(actor, "flags.write");
 
-  return auditedMutate({
-    actor,
-    action: "feature_flag.create",
-    entityType: "FeatureFlag",
-    run: (tx) =>
-      tx.featureFlag.create({
-        data: {
-          ...input,
-          updatedById: actor.id,
-          updatedByName: actor.name,
-        },
-      }),
-    resolveEntityId: (flag) => flag.id,
-  });
+  return withKeyConflict(() =>
+    auditedMutate({
+      actor,
+      action: "feature_flag.create",
+      entityType: "FeatureFlag",
+      run: (tx) =>
+        tx.featureFlag.create({
+          data: {
+            ...input,
+            updatedById: actor.id,
+            updatedByName: actor.name,
+          },
+        }),
+      resolveEntityId: (flag) => flag.id,
+    }),
+  );
 }
 
 export async function updateFeatureFlag(
   actor: ActorContext,
   id: string,
-  input: Partial<FeatureFlagInput>,
+  input: FeatureFlagPatch,
 ) {
   requirePermission(actor, "flags.write");
   await getFeatureFlag(actor, id);
 
-  return auditedMutate({
-    actor,
-    action: "feature_flag.update",
-    entityType: "FeatureFlag",
-    entityId: id,
-    loadBefore: (tx) => tx.featureFlag.findUnique({ where: { id } }),
-    run: (tx) =>
-      tx.featureFlag.update({
-        where: { id },
-        data: {
-          ...input,
-          updatedById: actor.id,
-          updatedByName: actor.name,
-        },
-      }),
-  });
+  return withKeyConflict(() =>
+    auditedMutate({
+      actor,
+      action: "feature_flag.update",
+      entityType: "FeatureFlag",
+      entityId: id,
+      loadBefore: (tx) => tx.featureFlag.findUnique({ where: { id } }),
+      run: (tx) =>
+        tx.featureFlag.update({
+          where: { id },
+          data: {
+            ...input,
+            updatedById: actor.id,
+            updatedByName: actor.name,
+          },
+        }),
+    }),
+  );
 }
 
 export async function setFeatureFlagEnabled(

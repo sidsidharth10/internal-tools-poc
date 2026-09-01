@@ -71,6 +71,14 @@ export class NotFoundError extends Error {
   }
 }
 
+export class ConflictError extends Error {
+  readonly status = 409;
+  constructor(message: string) {
+    super(message);
+    this.name = "ConflictError";
+  }
+}
+
 export function can(actor: ActorContext, permission: Permission): boolean {
   return ROLE_PERMISSIONS[actor.role].includes(permission);
 }

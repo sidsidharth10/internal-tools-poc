@@ -98,7 +98,30 @@ async function main() {
   const created = opsCreate.body as { id: string } | null;
 
   if (created?.id) {
-    // 4. Deletes are admin-only.
+    // 4. A duplicate key in the same environment is a 409, not a 500.
+    const duplicate = await call(ops, "/api/feature-flags", {
+      method: "POST",
+      body: JSON.stringify({
+        key,
+        name: "Duplicate proof flag",
+        environment: "dev",
+      }),
+    });
+    record("duplicate key POST /api/feature-flags", "409", String(duplicate.status));
+
+    // 5. A partial PATCH leaves the fields it does not mention alone.
+    const patched = await call(ops, `/api/feature-flags/${created.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ enabled: true }),
+    });
+    const afterPatch = patched.body as { description: string } | null;
+    record(
+      "PATCH {enabled} preserves description",
+      "Created by scripts/proof.ts",
+      String(afterPatch?.description),
+    );
+
+    // 6. Deletes are admin-only.
     const opsDelete = await call(ops, `/api/feature-flags/${created.id}`, {
       method: "DELETE",
     });
@@ -109,14 +132,14 @@ async function main() {
     });
     record("admin DELETE /api/feature-flags/:id", "200", String(adminDelete.status));
 
-    // 5. Both the create and the delete were audited automatically.
+    // 7. The create, the patch and the delete were all audited automatically.
     const entries = await prisma.auditLog.count({
       where: { entityType: "FeatureFlag", entityId: created.id },
     });
-    record("audit rows written for the flag", "2", String(entries));
+    record("audit rows written for the flag", "3", String(entries));
   }
 
-  // 6. Server-side filtering: the API returns a filtered page, not the whole table.
+  // 8. Server-side filtering: the API returns a filtered page, not the whole table.
   const filtered = await call(
     admin,
     "/api/feature-flags?environment=prod&pageSize=10",

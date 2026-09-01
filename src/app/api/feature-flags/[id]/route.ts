@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { withApiErrors } from "@/lib/api";
 import {
   deleteFeatureFlag,
-  featureFlagInputSchema,
+  featureFlagPatchSchema,
   getFeatureFlag,
   updateFeatureFlag,
 } from "@/lib/data/feature-flags";
@@ -23,7 +23,7 @@ export async function PATCH(request: Request, { params }: Params) {
   return withApiErrors(async () => {
     const actor = await requireActor();
     const { id } = await params;
-    const input = featureFlagInputSchema.partial().parse(await request.json());
+    const input = featureFlagPatchSchema.parse(await request.json());
     return NextResponse.json(await updateFeatureFlag(actor, id, input));
   });
 }

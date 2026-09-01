@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import {
+  ConflictError,
   ForbiddenError,
   NotFoundError,
   UnauthenticatedError,
@@ -20,6 +21,9 @@ export function toErrorResponse(error: unknown): NextResponse {
   }
   if (error instanceof NotFoundError) {
     return NextResponse.json({ error: error.message }, { status: 404 });
+  }
+  if (error instanceof ConflictError) {
+    return NextResponse.json({ error: error.message }, { status: 409 });
   }
   if (error instanceof ZodError) {
     return NextResponse.json(
