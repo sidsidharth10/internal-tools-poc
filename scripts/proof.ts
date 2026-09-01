@@ -6,6 +6,7 @@
  * caller cannot retrieve or mutate rows even with the UI bypassed entirely.
  */
 import { PrismaClient } from "../src/generated/prisma";
+import { OPS_REFUND_LIMIT_CENTS } from "../src/lib/domain";
 
 const BASE_URL = process.env.PROOF_BASE_URL ?? "http://localhost:3000";
 
@@ -154,6 +155,87 @@ async function main() {
     "…out of a larger total counted in SQL",
     "true",
     String((page?.total ?? 0) > 10),
+  );
+
+  // 7. Refund decisions are gated on role *and* on the amount of the request.
+  const smallRefund = await prisma.refundRequest.findFirstOrThrow({
+    where: { status: "pending", amountCents: { lt: OPS_REFUND_LIMIT_CENTS } },
+    orderBy: { requestedAt: "asc" },
+  });
+  const largeRefund = await prisma.refundRequest.findFirstOrThrow({
+    where: { status: "pending", amountCents: { gte: OPS_REFUND_LIMIT_CENTS } },
+    orderBy: { requestedAt: "asc" },
+  });
+
+  const decide = (cookie: string, id: string, decision: string) =>
+    call(cookie, `/api/refunds/${id}/decision`, {
+      method: "POST",
+      body: JSON.stringify({ decision }),
+    });
+
+  const complianceDecision = await decide(compliance, smallRefund.id, "approved");
+  record(
+    "compliance POST /api/refunds/:id/decision",
+    "403",
+    String(complianceDecision.status),
+  );
+
+  const opsSmall = await decide(ops, smallRefund.id, "approved");
+  record("ops decides a refund under the limit", "200", String(opsSmall.status));
+
+  const opsLarge = await decide(ops, largeRefund.id, "approved");
+  record("ops decides a refund over the limit", "403", String(opsLarge.status));
+
+  const adminLarge = await decide(admin, largeRefund.id, "denied");
+  record(
+    "admin decides the same large refund",
+    "200",
+    String(adminLarge.status),
+  );
+
+  // 8. A decided refund cannot be silently decided again.
+  const repeat = await decide(admin, largeRefund.id, "approved");
+  record("admin re-decides an already-denied refund", "409", String(repeat.status));
+
+  // 9. The transition is in the audit log, with before/after snapshots.
+  const decisionLog = await prisma.auditLog.findFirst({
+    where: { entityType: "RefundRequest", entityId: largeRefund.id },
+    orderBy: { createdAt: "desc" },
+  });
+  record("audit row action for the large refund", "refund.deny", String(decisionLog?.action));
+  const before = decisionLog?.before ? JSON.parse(decisionLog.before) : null;
+  const after = decisionLog?.after ? JSON.parse(decisionLog.after) : null;
+  record(
+    "audit row records the status transition",
+    "pending -> denied",
+    `${before?.status} -> ${after?.status}`,
+  );
+
+  // 10. Refund filtering happens in SQL: an amount range narrows the counted total.
+  const allRefunds = await call(admin, "/api/refunds?pageSize=10");
+  const overThousand = await call(
+    admin,
+    "/api/refunds?minAmount=1000&pageSize=10",
+  );
+  const allPage = allRefunds.body as { rows: unknown[]; total: number } | null;
+  const filteredPage = overThousand.body as {
+    rows: { amountCents: number }[];
+    total: number;
+  } | null;
+  record(
+    "GET /api/refunds?minAmount=1000 returns 10 rows of a smaller total",
+    "true",
+    String(
+      (filteredPage?.rows.length ?? 0) === 10 &&
+        (filteredPage?.total ?? 0) < (allPage?.total ?? 0),
+    ),
+  );
+  record(
+    "…and every returned row respects the filter",
+    "true",
+    String(
+      (filteredPage?.rows ?? []).every((row) => row.amountCents >= 100_000),
+    ),
   );
 
   const width = Math.max(...checks.map((c) => c.name.length));
