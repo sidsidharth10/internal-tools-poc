@@ -58,6 +58,8 @@ PASS  ops decides a refund under the limit               expected 200, got 200
 PASS  ops decides a refund over the limit                expected 403, got 403
 PASS  admin decides the same large refund                expected 200, got 200
 PASS  audit row records the status transition            expected pending -> denied, got pending -> denied
+PASS  ops GET /api/kyc/:id omits sensitive keys          expected true, got true
+PASS  ops POST /api/kyc/:id/status                       expected 403, got 403
 ```
 
 You can reproduce any line by hand with `curl` — bypassing the UI entirely
@@ -170,9 +172,18 @@ clickable for `ops` on over-limit rows: clicking one surfaces the API's own 403
 
 ### App 3 — KYC Review Queue (built thin, on purpose)
 
-*Not yet built.* List, detail and status change, with role-gated *visibility*:
-`compliance` receives full applicant detail, `ops` receives name and status only,
-enforced by the query rather than by hiding fields in the UI.
+A list of the 80 seeded applicants (status filter, name search, sortable
+columns), a detail view, and a status change gated on `kyc.decide` and audited as
+`kyc.status_change`.
+
+The one thing it demonstrates properly is role-gated *visibility* decided in the
+query. `src/lib/data/kyc.ts` holds two Prisma `select` objects and picks between
+them from the actor's permission: `kyc.read.full` (compliance, admin) selects the
+whole row, `kyc.read.redacted` (ops) selects only `id`, `fullName`, `status` and
+`submittedAt`. Date of birth, country, document type, document reference and risk
+notes are therefore never read out of the database for an `ops` caller, and are
+absent from the API response — not fetched and then stripped, and not hidden by
+the page. `npm run proof` asserts exactly that over HTTP.
 
 It exists to show the pattern extends to a higher-stakes domain — nothing more.
 

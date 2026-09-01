@@ -157,7 +157,7 @@ async function main() {
     String((page?.total ?? 0) > 10),
   );
 
-  // 7. Refund decisions are gated on role *and* on the amount of the request.
+  // 9. Refund decisions are gated on role *and* on the amount of the request.
   const smallRefund = await prisma.refundRequest.findFirstOrThrow({
     where: { status: "pending", amountCents: { lt: OPS_REFUND_LIMIT_CENTS } },
     orderBy: { requestedAt: "asc" },
@@ -193,11 +193,11 @@ async function main() {
     String(adminLarge.status),
   );
 
-  // 8. A decided refund cannot be silently decided again.
+  // 10. A decided refund cannot be silently decided again.
   const repeat = await decide(admin, largeRefund.id, "approved");
   record("admin re-decides an already-denied refund", "409", String(repeat.status));
 
-  // 9. The transition is in the audit log, with before/after snapshots.
+  // 11. The transition is in the audit log, with before/after snapshots.
   const decisionLog = await prisma.auditLog.findFirst({
     where: { entityType: "RefundRequest", entityId: largeRefund.id },
     orderBy: { createdAt: "desc" },
@@ -211,7 +211,7 @@ async function main() {
     `${before?.status} -> ${after?.status}`,
   );
 
-  // 10. Refund filtering happens in SQL: an amount range narrows the counted total.
+  // 12. Refund filtering happens in SQL: an amount range narrows the counted total.
   const allRefunds = await call(admin, "/api/refunds?pageSize=10");
   const overThousand = await call(
     admin,
@@ -236,6 +236,67 @@ async function main() {
     String(
       (filteredPage?.rows ?? []).every((row) => row.amountCents >= 100_000),
     ),
+  );
+
+  // 13. KYC visibility is decided by the Prisma `select`, so the sensitive columns
+  //    are simply absent from the payload an `ops` caller receives.
+  const applicant = await prisma.kycApplicant.findFirstOrThrow({
+    orderBy: { submittedAt: "desc" },
+  });
+
+  const opsApplicant = await call(ops, `/api/kyc/${applicant.id}`);
+  const opsKeys = Object.keys((opsApplicant.body ?? {}) as object);
+  const SENSITIVE = ["documentRef", "dateOfBirth", "riskNotes"];
+  record(
+    "ops GET /api/kyc/:id omits sensitive keys",
+    "true",
+    String(SENSITIVE.every((key) => !opsKeys.includes(key))),
+  );
+
+  const complianceApplicant = await call(compliance, `/api/kyc/${applicant.id}`);
+  const complianceKeys = Object.keys((complianceApplicant.body ?? {}) as object);
+  record(
+    "compliance GET /api/kyc/:id returns them",
+    "true",
+    String(SENSITIVE.every((key) => complianceKeys.includes(key))),
+  );
+
+  // 14. Deciding is role-gated, and a decision that lands is audited.
+  const nextStatus = applicant.status === "approved" ? "under_review" : "approved";
+  const opsDecision = await call(ops, `/api/kyc/${applicant.id}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status: nextStatus }),
+  });
+  record("ops POST /api/kyc/:id/status", "403", String(opsDecision.status));
+
+  const complianceKycDecision = await call(
+    compliance,
+    `/api/kyc/${applicant.id}/status`,
+    { method: "POST", body: JSON.stringify({ status: nextStatus }) },
+  );
+  record(
+    "compliance POST /api/kyc/:id/status",
+    "200",
+    String(complianceKycDecision.status),
+  );
+
+  const decisionAudit = await prisma.auditLog.findFirst({
+    where: {
+      entityType: "KycApplicant",
+      entityId: applicant.id,
+      action: "kyc.status_change",
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const transition = decisionAudit
+    ? `${(JSON.parse(decisionAudit.before ?? "{}") as { status?: string }).status} → ${
+        (JSON.parse(decisionAudit.after ?? "{}") as { status?: string }).status
+      }`
+    : "no audit row";
+  record(
+    "audit row records the KYC transition",
+    `${applicant.status} → ${nextStatus}`,
+    transition,
   );
 
   const width = Math.max(...checks.map((c) => c.name.length));
