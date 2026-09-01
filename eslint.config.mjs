@@ -18,7 +18,29 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "src/generated/**",
     ],
+  },
+  {
+    // Deny-by-default enforcement is only meaningful if nothing can reach the
+    // database except the data-access layer, so the Prisma client is off-limits
+    // to pages, components and API routes.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/lib/db.ts", "src/lib/audit.ts", "src/lib/data/**", "src/lib/session.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/lib/db",
+              message:
+                "Import a function from @/lib/data/* instead: every query must go through the policy layer.",
+            },
+          ],
+        },
+      ],
+    },
   },
 ];
 
