@@ -1,13 +1,28 @@
-import { Card, PageHeader } from "@/components/ui";
+import { Suspense } from "react";
 
-export default function KycPlaceholderPage() {
+import { PageHeader } from "@/components/ui";
+import { can } from "@/lib/policy";
+import { requireActor } from "@/lib/session";
+
+import { KycTable } from "./kyc-table";
+
+export default async function KycPage() {
+  const actor = await requireActor();
+  const full = can(actor, "kyc.read.full");
+
   return (
     <div>
-      <PageHeader title="KYC Review Queue" />
-      <Card className="p-4 text-sm text-slate-600">
-        Not built yet. This app is deliberately the thinnest of the three: list,
-        detail, status change, and query-layer redaction for the ops role.
-      </Card>
+      <PageHeader
+        title="KYC Review Queue"
+        description={
+          full
+            ? "Your role reads the full applicant record, including date of birth, document reference and risk notes."
+            : "Your role reads name, status and submission date only: /api/kyc selects those four columns and never queries the sensitive ones."
+        }
+      />
+      <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+        <KycTable />
+      </Suspense>
     </div>
   );
 }
