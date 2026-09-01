@@ -43,6 +43,7 @@ export function RefundsTable({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  const [decisions, setDecisions] = useState(0);
 
   /**
    * Mirrors the server rule so the button state matches, but the button is never
@@ -76,6 +77,7 @@ export function RefundsTable({
         return;
       }
       reload();
+      setDecisions((n) => n + 1);
     } finally {
       setPending(null);
     }
@@ -190,7 +192,7 @@ export function RefundsTable({
           {error}
         </p>
       ) : null}
-      <SummaryLine />
+      <SummaryLine refreshKey={decisions} />
       <DataTable
         endpoint="/api/refunds"
         rowKey={(row) => row.id}
@@ -223,7 +225,7 @@ export function RefundsTable({
 }
 
 /** Counts for the current filter, aggregated by SQL `GROUP BY`, not in the browser. */
-function SummaryLine() {
+function SummaryLine({ refreshKey }: { refreshKey: number }) {
   const searchParams = useSearchParams();
   const queryString = searchParams.toString();
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -243,7 +245,7 @@ function SummaryLine() {
     return () => {
       cancelled = true;
     };
-  }, [queryString]);
+  }, [queryString, refreshKey]);
 
   if (!summary) return null;
 
