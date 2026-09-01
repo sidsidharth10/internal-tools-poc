@@ -156,6 +156,67 @@ async function main() {
     String((page?.total ?? 0) > 10),
   );
 
+  // 7. KYC visibility is decided by the Prisma `select`, so the sensitive columns
+  //    are simply absent from the payload an `ops` caller receives.
+  const applicant = await prisma.kycApplicant.findFirstOrThrow({
+    orderBy: { submittedAt: "desc" },
+  });
+
+  const opsApplicant = await call(ops, `/api/kyc/${applicant.id}`);
+  const opsKeys = Object.keys((opsApplicant.body ?? {}) as object);
+  const SENSITIVE = ["documentRef", "dateOfBirth", "riskNotes"];
+  record(
+    "ops GET /api/kyc/:id omits sensitive keys",
+    "true",
+    String(SENSITIVE.every((key) => !opsKeys.includes(key))),
+  );
+
+  const complianceApplicant = await call(compliance, `/api/kyc/${applicant.id}`);
+  const complianceKeys = Object.keys((complianceApplicant.body ?? {}) as object);
+  record(
+    "compliance GET /api/kyc/:id returns them",
+    "true",
+    String(SENSITIVE.every((key) => complianceKeys.includes(key))),
+  );
+
+  // 8. Deciding is role-gated, and a decision that lands is audited.
+  const nextStatus = applicant.status === "approved" ? "under_review" : "approved";
+  const opsDecision = await call(ops, `/api/kyc/${applicant.id}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status: nextStatus }),
+  });
+  record("ops POST /api/kyc/:id/status", "403", String(opsDecision.status));
+
+  const complianceDecision = await call(
+    compliance,
+    `/api/kyc/${applicant.id}/status`,
+    { method: "POST", body: JSON.stringify({ status: nextStatus }) },
+  );
+  record(
+    "compliance POST /api/kyc/:id/status",
+    "200",
+    String(complianceDecision.status),
+  );
+
+  const decisionAudit = await prisma.auditLog.findFirst({
+    where: {
+      entityType: "KycApplicant",
+      entityId: applicant.id,
+      action: "kyc.status_change",
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const transition = decisionAudit
+    ? `${(JSON.parse(decisionAudit.before ?? "{}") as { status?: string }).status} → ${
+        (JSON.parse(decisionAudit.after ?? "{}") as { status?: string }).status
+      }`
+    : "no audit row";
+  record(
+    "audit row records the KYC transition",
+    `${applicant.status} → ${nextStatus}`,
+    transition,
+  );
+
   const width = Math.max(...checks.map((c) => c.name.length));
   for (const check of checks) {
     console.log(
