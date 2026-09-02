@@ -3,7 +3,15 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { AuditTrail } from "@/components/audit-trail";
-import { Badge, Button, Callout, Card, PageHeader } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Callout,
+  Card,
+  CardHeader,
+  Mono,
+  PageHeader,
+} from "@/components/ui";
 import { listEntityAuditTrail } from "@/lib/data/audit-log";
 import { getApplicant } from "@/lib/data/kyc";
 import type { KycStatus } from "@/lib/domain";
@@ -15,9 +23,11 @@ import { StatusControl } from "./status-control";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div>
-      <dt className="text-xs font-medium text-slate-500">{label}</dt>
-      <dd className="mt-0.5 text-sm text-slate-900">{children}</dd>
+    <div className="border-b border-line pb-3 last:border-0 last:pb-0">
+      <dt className="text-xs font-medium tracking-wide text-ink-muted uppercase">
+        {label}
+      </dt>
+      <dd className="mt-1 text-sm text-ink">{children}</dd>
     </div>
   );
 }
@@ -43,20 +53,36 @@ export default async function KycDetailPage({
   return (
     <div className="max-w-3xl space-y-6">
       <PageHeader
+        eyebrow="KYC Review"
         title={applicant.fullName}
         description={`Applicant ${applicant.id}`}
         actions={
           <Link href="/kyc">
-            <Button variant="secondary">Back</Button>
+            <Button variant="secondary" size="sm">
+              Back to queue
+            </Button>
           </Link>
         }
       />
 
-      <Card className="p-4">
-        <dl className="grid grid-cols-2 gap-4">
+      <Card>
+        <CardHeader
+          title="Applicant record"
+          description={
+            result.visibility === "full"
+              ? "Full record: your role is permitted every column."
+              : "Summary record: the sensitive columns are never selected for your role."
+          }
+          actions={
+            <Badge tone={result.visibility === "full" ? "green" : "amber"} dot>
+              {result.visibility === "full" ? "full detail" : "redacted"}
+            </Badge>
+          }
+        />
+        <dl className="grid gap-x-8 gap-y-3 px-5 py-4 sm:grid-cols-2">
           <Field label="Status">
-            <Badge tone={STATUS_TONES[applicant.status as KycStatus]}>
-              {applicant.status}
+            <Badge tone={STATUS_TONES[applicant.status as KycStatus]} dot>
+              {applicant.status.replace("_", " ")}
             </Badge>
           </Field>
           <Field label="Submitted">
@@ -73,7 +99,9 @@ export default async function KycDetailPage({
                 {result.applicant.documentType}
               </Field>
               <Field label="Document reference">
-                <span className="font-mono">{result.applicant.documentRef}</span>
+                <span className="font-mono text-[0.8rem]">
+                  {result.applicant.documentRef}
+                </span>
               </Field>
               <Field label="Risk notes">{result.applicant.riskNotes}</Field>
               <Field label="Last reviewed">
@@ -91,11 +119,11 @@ export default async function KycDetailPage({
       </Card>
 
       {result.visibility === "redacted" ? (
-        <Callout title="Redacted at the query layer">
+        <Callout tone="warn" title="Redacted at the query layer">
           <p>
             Date of birth, country, document type, document reference and risk
             notes are absent from the API response for role {actor.role}:{" "}
-            <code>GET /api/kyc/{applicant.id}</code> selects only id, fullName,
+            <Mono>GET /api/kyc/{applicant.id}</Mono> selects only id, fullName,
             status and submittedAt, so those columns are never read from the
             database. Nothing is being hidden here by the page.
           </p>
@@ -103,13 +131,20 @@ export default async function KycDetailPage({
       ) : null}
 
       {can(actor, "kyc.decide") ? (
-        <Card className="p-4">
-          <h2 className="font-semibold text-slate-900">Decision</h2>
-          <p className="mt-1 mb-3 text-sm text-slate-600">
-            Requires <code>kyc.decide</code>; every change is written through
-            the audited mutation path as <code>kyc.status_change</code>.
-          </p>
-          <StatusControl id={applicant.id} current={applicant.status} />
+        <Card>
+          <CardHeader
+            title="Decision"
+            description={
+              <>
+                Requires <Mono>kyc.decide</Mono>; every change is written
+                through the audited mutation path as{" "}
+                <Mono>kyc.status_change</Mono>.
+              </>
+            }
+          />
+          <div className="px-5 py-4">
+            <StatusControl id={applicant.id} current={applicant.status} />
+          </div>
         </Card>
       ) : null}
 

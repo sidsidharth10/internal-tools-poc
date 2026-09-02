@@ -14,6 +14,20 @@ import { PAGE_SIZES, type Paginated } from "@/lib/data/query";
 
 import { Button } from "./ui";
 
+function SortIcon({ state }: { state: "asc" | "desc" | "none" }) {
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      aria-hidden="true"
+      className={`h-3 w-3 ${state === "none" ? "text-ink-muted/50" : "text-brand-600"}`}
+      fill="currentColor"
+    >
+      <path d="M6 1.5 9 5H3z" opacity={state === "desc" ? 0.25 : 1} />
+      <path d="M6 10.5 3 7h6z" opacity={state === "asc" ? 0.25 : 1} />
+    </svg>
+  );
+}
+
 export type Column<T> = {
   /** Also the sort key sent to the API when `sortable` is set. */
   key: string;
@@ -126,146 +140,202 @@ export function DataTable<T>({
   const page = data?.page ?? 1;
   const pageCount = data?.pageCount ?? 1;
 
-  return (
-    <div className="space-y-3">
-      {filters.length > 0 ? (
-        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-3">
-          {filters.map((filter) => (
-            <FilterControl
-              key={filter.key}
-              filter={filter}
-              value={searchParams.get(filter.key) ?? ""}
-              onChange={(value) => setParams({ [filter.key]: value })}
-            />
-          ))}
-          <Button
-            variant="secondary"
-            onClick={() => router.replace(pathname, { scroll: false })}
-          >
-            Clear
-          </Button>
-        </div>
-      ) : null}
+  const activeFilters = filters.filter((filter) =>
+    Boolean(searchParams.get(filter.key)),
+  ).length;
+  const pageSize = data?.pageSize ?? 25;
+  const firstRow = data && data.total > 0 ? (page - 1) * pageSize + 1 : 0;
+  const lastRow = data ? Math.min(page * pageSize, data.total) : 0;
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50">
-            <tr>
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className={`px-4 py-2 font-medium text-slate-600 ${
-                    column.align === "right" ? "text-right" : "text-left"
-                  }`}
-                >
-                  {column.sortable ? (
-                    <button
-                      className="inline-flex items-center gap-1 hover:text-slate-900"
-                      onClick={() =>
-                        setParams({
-                          sort: column.key,
-                          dir:
-                            sort === column.key && dir === "asc"
-                              ? "desc"
-                              : "asc",
-                        })
-                      }
-                    >
-                      {column.header}
-                      <span className="text-xs text-slate-400">
-                        {sort === column.key ? (dir === "asc" ? "▲" : "▼") : "↕"}
-                      </span>
-                    </button>
-                  ) : (
-                    column.header
-                  )}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {error ? (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-4 py-8 text-center text-red-700"
-                >
-                  {error}
-                </td>
-              </tr>
-            ) : null}
-            {!error && data?.rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-4 py-8 text-center text-slate-500"
-                >
-                  {emptyMessage}
-                </td>
-              </tr>
-            ) : null}
-            {data?.rows.map((row) => (
-              <tr key={rowKey(row)} className="hover:bg-slate-50">
+  return (
+    <div className="space-y-2.5">
+      <div className="overflow-hidden rounded-card border border-line bg-surface shadow-card">
+        {filters.length > 0 ? (
+          <div className="flex flex-wrap items-end gap-x-3 gap-y-2.5 border-b border-line bg-surface-muted px-4 py-3">
+            {filters.map((filter) => (
+              <FilterControl
+                key={filter.key}
+                filter={filter}
+                value={searchParams.get(filter.key) ?? ""}
+                onChange={(value) => setParams({ [filter.key]: value })}
+              />
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mb-0.5"
+              disabled={activeFilters === 0}
+              onClick={() => router.replace(pathname, { scroll: false })}
+            >
+              Clear{activeFilters > 0 ? ` (${activeFilters})` : ""}
+            </Button>
+          </div>
+        ) : null}
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-line">
                 {columns.map((column) => (
-                  <td
+                  <th
                     key={column.key}
-                    className={`px-4 py-2 align-middle ${
+                    scope="col"
+                    className={`px-4 py-2.5 text-xs font-semibold tracking-[0.06em] text-ink-muted uppercase ${
                       column.align === "right" ? "text-right" : "text-left"
                     }`}
                   >
-                    {column.render(row, reload)}
-                  </td>
+                    {column.sortable ? (
+                      <button
+                        className={`inline-flex items-center gap-1.5 rounded transition-colors hover:text-ink ${
+                          sort === column.key ? "text-ink" : ""
+                        }`}
+                        onClick={() =>
+                          setParams({
+                            sort: column.key,
+                            dir:
+                              sort === column.key && dir === "asc"
+                                ? "desc"
+                                : "asc",
+                          })
+                        }
+                      >
+                        {column.header}
+                        <SortIcon
+                          state={
+                            sort === column.key
+                              ? dir === "asc"
+                                ? "asc"
+                                : "desc"
+                              : "none"
+                          }
+                        />
+                      </button>
+                    ) : (
+                      column.header
+                    )}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {error ? (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="px-4 py-10 text-center text-sm text-red-700"
+                  >
+                    {error}
+                  </td>
+                </tr>
+              ) : null}
+              {!error && loading && !data ? <SkeletonRows columns={columns} /> : null}
+              {!error && data?.rows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="px-4 py-14">
+                    <p className="text-center text-sm font-medium text-ink">
+                      Nothing to show
+                    </p>
+                    <p className="mt-1 text-center text-sm text-ink-muted">
+                      {emptyMessage}
+                    </p>
+                  </td>
+                </tr>
+              ) : null}
+              {data?.rows.map((row) => (
+                <tr
+                  key={rowKey(row)}
+                  className={`border-b border-line/70 transition-colors last:border-0 hover:bg-surface-muted ${
+                    loading ? "opacity-60" : ""
+                  }`}
+                >
+                  {columns.map((column) => (
+                    <td
+                      key={column.key}
+                      className={`px-4 py-3 align-middle text-ink-soft ${
+                        column.align === "right" ? "text-right" : "text-left"
+                      }`}
+                    >
+                      {column.render(row, reload)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface-muted px-4 py-2.5 text-sm text-ink-soft">
+          <span className="tabular">
+            {loading && !data
+              ? "Loading…"
+              : `${firstRow.toLocaleString()}–${lastRow.toLocaleString()} of ${
+                  data?.total.toLocaleString() ?? 0
+                }`}
+          </span>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-xs text-ink-muted">
+              Rows
+              <select
+                className="h-7 rounded-lg border border-line-strong bg-surface px-1.5 text-xs text-ink"
+                value={searchParams.get("pageSize") ?? "25"}
+                onChange={(e) => setParams({ pageSize: e.target.value })}
+              >
+                {PAGE_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <span className="tabular text-xs text-ink-muted">
+              Page {page} of {pageCount}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setParams({ page: String(page - 1) }, false)}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={page >= pageCount}
+                onClick={() => setParams({ page: String(page + 1) }, false)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-        <span>
-          {loading
-            ? "Loading…"
-            : `${data?.total.toLocaleString() ?? 0} rows · page ${page} of ${pageCount}`}
-        </span>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            disabled={page <= 1}
-            onClick={() => setParams({ page: String(page - 1) }, false)}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={page >= pageCount}
-            onClick={() => setParams({ page: String(page + 1) }, false)}
-          >
-            Next
-          </Button>
-        </div>
-        <label className="flex items-center gap-2">
-          Rows
-          <select
-            className="rounded-md border border-slate-300 px-2 py-1"
-            value={searchParams.get("pageSize") ?? "25"}
-            onChange={(e) => setParams({ pageSize: e.target.value })}
-          >
-            {PAGE_SIZES.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-        </label>
-        <code
-          className="ml-auto truncate rounded bg-slate-100 px-2 py-1 text-xs text-slate-600"
-          title="The request the browser actually made — filtering happens in SQL, not in the browser."
-        >
-          GET {lastUrl}
-        </code>
-      </div>
+      <p
+        className="truncate text-xs text-ink-muted"
+        title="The request the browser actually made — filtering happens in SQL, not in the browser."
+      >
+        <span className="font-medium">Request</span>{" "}
+        <code className="font-mono">GET {lastUrl}</code>
+      </p>
     </div>
+  );
+}
+
+function SkeletonRows<T>({ columns }: { columns: Column<T>[] }) {
+  return (
+    <>
+      {Array.from({ length: 6 }).map((_, rowIndex) => (
+        <tr key={rowIndex} className="border-b border-line/70 last:border-0">
+          {columns.map((column) => (
+            <td key={column.key} className="px-4 py-3">
+              <span className="block h-3.5 animate-pulse rounded bg-line" />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
   );
 }
 
@@ -300,11 +370,13 @@ function FilterControl({
   }, [draft, filter.type, onChange]);
 
   const inputClass =
-    "rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-900";
+    "h-9 rounded-lg border border-line-strong bg-surface px-2.5 text-sm text-ink placeholder:text-ink-muted/70 focus:border-brand-500";
+  const labelClass =
+    "flex flex-col gap-1 text-[0.7rem] font-medium tracking-wide text-ink-muted uppercase";
 
   if (filter.type === "select") {
     return (
-      <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+      <label className={labelClass}>
         {filter.label}
         <select
           className={inputClass}
@@ -324,7 +396,7 @@ function FilterControl({
 
   if (filter.type === "search") {
     return (
-      <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+      <label className={labelClass}>
         Search
         <input
           className={`${inputClass} w-64`}
@@ -337,10 +409,10 @@ function FilterControl({
   }
 
   return (
-    <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+    <label className={labelClass}>
       {filter.label}
       <input
-        className={inputClass}
+        className={`${inputClass} tabular`}
         type={filter.type === "date" ? "date" : "number"}
         placeholder={filter.type === "number" ? filter.placeholder : undefined}
         value={draft}
