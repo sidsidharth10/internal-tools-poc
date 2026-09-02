@@ -15,6 +15,7 @@ export default async function RefundsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
+        eyebrow="Application 2"
         title="Refunds Dashboard"
         description={`5,200 seeded requests, filtered, sorted, counted and paginated in SQL. Deciding a refund is gated on role and on value: ops under ${formatCents(
           OPS_REFUND_LIMIT_CENTS,
@@ -32,7 +33,10 @@ export default async function RefundsPage() {
       ) : null}
 
       {canDecideLimited ? (
-        <Callout title={`Decision limit: ${formatCents(OPS_REFUND_LIMIT_CENTS)}`}>
+        <Callout
+          tone="warn"
+          title={`Decision limit: ${formatCents(OPS_REFUND_LIMIT_CENTS)}`}
+        >
           <p>
             Approve and Deny stay clickable on larger requests on purpose. The
             API is what refuses them, and its 403 message is shown above the
@@ -41,7 +45,7 @@ export default async function RefundsPage() {
         </Callout>
       ) : null}
 
-      <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+      <Suspense fallback={<p className="text-sm text-ink-muted">Loading…</p>}>
         <RefundsTable
           canDecideAny={canDecideAny}
           canDecideLimited={canDecideLimited}

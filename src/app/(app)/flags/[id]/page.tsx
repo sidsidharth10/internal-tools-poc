@@ -31,18 +31,21 @@ export default async function FlagDetailPage({
   return (
     <div className="max-w-3xl space-y-6">
       <PageHeader
+        eyebrow="Feature Flags"
         title={flag.key}
         description={`${flag.name} · ${flag.environment}`}
         actions={
           <Link href="/flags">
-            <Button variant="secondary">Back</Button>
+            <Button variant="secondary" size="sm">
+              Back to list
+            </Button>
           </Link>
         }
       />
 
-      <Card className="p-4">
+      <Card className="p-5">
         {!canWrite ? (
-          <p className="mb-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          <p className="mb-4 rounded-lg border border-line bg-surface-muted px-3 py-2 text-sm text-ink-soft">
             Read-only: your role ({actor.role}) cannot modify feature flags.
           </p>
         ) : null}

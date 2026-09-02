@@ -23,7 +23,7 @@ const columns: Column<ApplicantRow>[] = [
     render: (row) => (
       <Link
         href={`/kyc/${row.id}`}
-        className="text-slate-900 underline-offset-2 hover:underline"
+        className="font-medium text-ink underline-offset-2 hover:text-brand-700 hover:underline"
       >
         {row.fullName}
       </Link>
@@ -34,8 +34,8 @@ const columns: Column<ApplicantRow>[] = [
     header: "Status",
     sortable: true,
     render: (row) => (
-      <Badge tone={STATUS_TONES[row.status as keyof typeof STATUS_TONES]}>
-        {row.status}
+      <Badge tone={STATUS_TONES[row.status as keyof typeof STATUS_TONES]} dot>
+        {row.status.replace("_", " ")}
       </Badge>
     ),
   },
@@ -44,7 +44,7 @@ const columns: Column<ApplicantRow>[] = [
     header: "Submitted",
     sortable: true,
     render: (row) => (
-      <span className="text-sm text-slate-600">
+      <span className="tabular text-ink-soft">
         {new Date(row.submittedAt).toLocaleString()}
       </span>
     ),
@@ -55,7 +55,9 @@ const columns: Column<ApplicantRow>[] = [
     align: "right",
     render: (row) => (
       <Link href={`/kyc/${row.id}`}>
-        <Button variant="secondary">Review</Button>
+        <Button variant="secondary" size="sm">
+          Review
+        </Button>
       </Link>
     ),
   },
