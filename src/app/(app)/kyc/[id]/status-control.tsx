@@ -41,7 +41,7 @@ export function StatusControl({
       <div className="flex flex-wrap items-center gap-2">
         <select
           aria-label="Status"
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900"
+          className="h-9 rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink focus:border-brand-500"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
@@ -56,7 +56,7 @@ export function StatusControl({
         </Button>
       </div>
       {error ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </p>
       ) : null}

@@ -1,4 +1,4 @@
-import { Card } from "./ui";
+import { Card, CardHeader } from "./ui";
 
 type Entry = {
   id: string;
@@ -43,27 +43,47 @@ function display(value: unknown): string {
 
 export function AuditTrail({ entries }: { entries: Entry[] }) {
   return (
-    <Card className="p-4">
-      <h2 className="font-semibold text-slate-900">Audit trail</h2>
+    <Card>
+      <CardHeader
+        title="Audit trail"
+        description="Written in the same transaction as the change itself."
+      />
       {entries.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-500">No changes recorded yet.</p>
+        <p className="px-5 py-6 text-sm text-ink-muted">
+          No changes recorded yet.
+        </p>
       ) : (
-        <ul className="mt-3 space-y-3">
+        <ol className="px-5 py-4">
           {entries.map((entry) => {
             const changes = diffSnapshots(entry.before, entry.after);
             return (
-              <li key={entry.id} className="border-l-2 border-slate-200 pl-3">
-                <p className="text-sm text-slate-900">
-                  <span className="font-mono">{entry.action}</span> by{" "}
-                  {entry.actor.name} ({entry.actor.role}) ·{" "}
+              <li
+                key={entry.id}
+                className="relative border-l border-line pb-5 pl-5 last:pb-0"
+              >
+                <span className="absolute top-1.5 -left-[4.5px] h-2 w-2 rounded-full border-2 border-surface bg-brand-500" />
+                <p className="text-sm text-ink">
+                  <span className="font-mono text-[0.8rem] font-medium">
+                    {entry.action}
+                  </span>{" "}
+                  <span className="text-ink-soft">
+                    by {entry.actor.name} ({entry.actor.role})
+                  </span>
+                </p>
+                <p className="mt-0.5 text-xs text-ink-muted">
                   {new Date(entry.createdAt).toLocaleString()}
                 </p>
                 {changes.length > 0 ? (
-                  <ul className="mt-1 space-y-0.5 text-xs text-slate-600">
+                  <ul className="mt-2 space-y-1 rounded-lg border border-line bg-surface-muted px-3 py-2 text-xs text-ink-soft">
                     {changes.map((change) => (
                       <li key={change.field}>
-                        <span className="font-medium">{change.field}</span>:{" "}
-                        {display(change.from)} → {display(change.to)}
+                        <span className="font-medium text-ink">
+                          {change.field}
+                        </span>{" "}
+                        <span className="text-ink-muted line-through">
+                          {display(change.from)}
+                        </span>{" "}
+                        → <span className="text-ink">{display(change.to)}</span>
                       </li>
                     ))}
                   </ul>
@@ -71,7 +91,7 @@ export function AuditTrail({ entries }: { entries: Entry[] }) {
               </li>
             );
           })}
-        </ul>
+        </ol>
       )}
     </Card>
   );

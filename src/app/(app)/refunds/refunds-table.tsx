@@ -4,7 +4,13 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { DataTable, type Column } from "@/components/data-table";
-import { Badge, Button, type BadgeTone } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  ErrorBanner,
+  Stat,
+  type BadgeTone,
+} from "@/components/ui";
 import {
   OPS_REFUND_LIMIT_CENTS,
   REFUND_STATUSES,
@@ -89,7 +95,7 @@ export function RefundsTable({
       header: "Customer",
       sortable: true,
       render: (row) => (
-        <span className="font-mono text-sm text-slate-900">
+        <span className="font-mono text-[0.8rem] text-ink">
           {row.customerRef}
         </span>
       ),
@@ -101,23 +107,29 @@ export function RefundsTable({
       align: "right",
       render: (row) => (
         <span
-          className={
+          className={`tabular ${
             row.amountCents >= OPS_REFUND_LIMIT_CENTS
-              ? "font-medium text-slate-900"
-              : "text-slate-700"
-          }
+              ? "font-semibold text-ink"
+              : "text-ink-soft"
+          }`}
         >
           {formatCents(row.amountCents)}
         </span>
       ),
     },
-    { key: "reason", header: "Reason", render: (row) => row.reason },
+    {
+      key: "reason",
+      header: "Reason",
+      render: (row) => <span className="text-ink-soft">{row.reason}</span>,
+    },
     {
       key: "status",
       header: "Status",
       sortable: true,
       render: (row) => (
-        <Badge tone={STATUS_TONES[row.status] ?? "neutral"}>{row.status}</Badge>
+        <Badge tone={STATUS_TONES[row.status] ?? "neutral"} dot>
+          {row.status}
+        </Badge>
       ),
     },
     {
@@ -125,7 +137,7 @@ export function RefundsTable({
       header: "Requested",
       sortable: true,
       render: (row) => (
-        <span className="text-sm text-slate-600">
+        <span className="tabular text-ink-soft">
           {new Date(row.requestedAt).toLocaleDateString()}
         </span>
       ),
@@ -137,7 +149,7 @@ export function RefundsTable({
       render: (row, reload) => {
         if (row.status !== "pending") {
           return (
-            <span className="text-sm text-slate-500">
+            <span className="text-xs text-ink-muted">
               {row.decidedByName ?? "—"}
               {row.decidedAt
                 ? ` · ${new Date(row.decidedAt).toLocaleDateString()}`
@@ -158,13 +170,10 @@ export function RefundsTable({
         const disabled = readOnly || pending === row.id;
 
         return (
-          <div className="flex justify-end gap-2">
-            {overLimit ? (
-              <span className="self-center text-xs text-amber-700">
-                over limit
-              </span>
-            ) : null}
+          <div className="flex items-center justify-end gap-2">
+            {overLimit ? <Badge tone="amber">over limit</Badge> : null}
             <Button
+              size="sm"
               disabled={disabled}
               title={title}
               onClick={() => decide(row, "approved", reload)}
@@ -173,6 +182,7 @@ export function RefundsTable({
             </Button>
             <Button
               variant="danger"
+              size="sm"
               disabled={disabled}
               title={title}
               onClick={() => decide(row, "denied", reload)}
@@ -186,13 +196,9 @@ export function RefundsTable({
   ];
 
   return (
-    <div className="space-y-3">
-      {error ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
-      <SummaryLine refreshKey={decisions} />
+    <div className="space-y-4">
+      {error ? <ErrorBanner>{error}</ErrorBanner> : null}
+      <SummaryTiles refreshKey={decisions} />
       <DataTable
         endpoint="/api/refunds"
         rowKey={(row) => row.id}
@@ -225,7 +231,7 @@ export function RefundsTable({
 }
 
 /** Counts for the current filter, aggregated by SQL `GROUP BY`, not in the browser. */
-function SummaryLine({ refreshKey }: { refreshKey: number }) {
+function SummaryTiles({ refreshKey }: { refreshKey: number }) {
   const searchParams = useSearchParams();
   const queryString = searchParams.toString();
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -250,14 +256,28 @@ function SummaryLine({ refreshKey }: { refreshKey: number }) {
   if (!summary) return null;
 
   return (
-    <p className="text-sm text-slate-600">
-      {summary.total.toLocaleString()} matching ·{" "}
-      <span className="text-amber-700">
-        {summary.byStatus.pending?.toLocaleString() ?? 0} pending
-      </span>{" "}
-      ({formatCents(summary.pendingValueCents)}) ·{" "}
-      {summary.byStatus.approved?.toLocaleString() ?? 0} approved ·{" "}
-      {summary.byStatus.denied?.toLocaleString() ?? 0} denied
-    </p>
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Stat
+        label="Matching"
+        value={summary.total.toLocaleString()}
+        hint="Counted by SQL for the current filter"
+      />
+      <Stat
+        label="Pending"
+        tone="amber"
+        value={summary.byStatus.pending?.toLocaleString() ?? "0"}
+        hint={`${formatCents(summary.pendingValueCents)} awaiting a decision`}
+      />
+      <Stat
+        label="Approved"
+        tone="green"
+        value={summary.byStatus.approved?.toLocaleString() ?? "0"}
+      />
+      <Stat
+        label="Denied"
+        tone="red"
+        value={summary.byStatus.denied?.toLocaleString() ?? "0"}
+      />
+    </div>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { DataTable, type Column } from "@/components/data-table";
-import { Badge, Button } from "@/components/ui";
+import { Badge, Button, ErrorBanner } from "@/components/ui";
 import { ENVIRONMENTS } from "@/lib/domain";
 
 type FlagRow = {
@@ -56,13 +56,18 @@ export function FlagsTable({
       render: (row) => (
         <Link
           href={`/flags/${row.id}`}
-          className="font-mono text-sm text-slate-900 underline-offset-2 hover:underline"
+          className="font-mono text-[0.8rem] font-medium text-ink underline-offset-2 hover:text-brand-700 hover:underline"
         >
           {row.key}
         </Link>
       ),
     },
-    { key: "name", header: "Name", sortable: true, render: (row) => row.name },
+    {
+      key: "name",
+      header: "Name",
+      sortable: true,
+      render: (row) => <span className="text-ink">{row.name}</span>,
+    },
     {
       key: "environment",
       header: "Environment",
@@ -80,6 +85,8 @@ export function FlagsTable({
       render: (row, reload) => (
         <Button
           variant={row.enabled ? "primary" : "secondary"}
+          size="sm"
+          className="w-12"
           disabled={!canWrite}
           title={canWrite ? undefined : "Your role cannot modify flags"}
           onClick={() =>
@@ -103,9 +110,11 @@ export function FlagsTable({
       header: "Last modified",
       sortable: true,
       render: (row) => (
-        <span className="text-sm text-slate-600">
-          {new Date(row.updatedAt).toLocaleString()}
-          {row.updatedByName ? ` · ${row.updatedByName}` : ""}
+        <span className="text-xs text-ink-muted">
+          <span className="tabular block text-ink-soft">
+            {new Date(row.updatedAt).toLocaleString()}
+          </span>
+          {row.updatedByName ?? "—"}
         </span>
       ),
     },
@@ -116,11 +125,14 @@ export function FlagsTable({
       render: (row, reload) => (
         <div className="flex justify-end gap-2">
           <Link href={`/flags/${row.id}`}>
-            <Button variant="secondary">Edit</Button>
+            <Button variant="secondary" size="sm">
+              Edit
+            </Button>
           </Link>
           {canDelete ? (
             <Button
               variant="danger"
+              size="sm"
               onClick={() => {
                 if (!confirm(`Delete flag "${row.key}" (${row.environment})?`))
                   return;
@@ -141,11 +153,7 @@ export function FlagsTable({
 
   return (
     <div className="space-y-3">
-      {error ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
+      {error ? <ErrorBanner>{error}</ErrorBanner> : null}
       <DataTable
         endpoint="/api/feature-flags"
         rowKey={(row) => row.id}

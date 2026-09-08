@@ -11,7 +11,7 @@ export default async function NewFlagPage() {
 
   if (!can(actor, "flags.write")) {
     return (
-      <Card className="p-4 text-sm text-slate-700">
+      <Card className="p-5 text-sm text-ink-soft">
         Your role ({actor.role}) cannot create feature flags.
       </Card>
     );
@@ -19,8 +19,12 @@ export default async function NewFlagPage() {
 
   return (
     <div className="max-w-xl">
-      <PageHeader title="New feature flag" />
-      <Card className="p-4">
+      <PageHeader
+        eyebrow="Feature Flags"
+        title="New feature flag"
+        description="Keys are unique per environment; a duplicate returns 409 from the API."
+      />
+      <Card className="p-5">
         <ResourceForm
           endpoint="/api/feature-flags"
           method="POST"

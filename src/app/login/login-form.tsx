@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Mono } from "@/components/ui";
 
 type LoginUser = {
   id: string;
@@ -40,33 +40,50 @@ export function LoginForm({ users }: { users: LoginUser[] }) {
 
   if (users.length === 0) {
     return (
-      <Card className="p-4 text-sm text-slate-700">
-        No users found. Run <code className="font-mono">npm run setup</code> to
-        create the database and seed data.
+      <Card className="p-5 text-sm text-ink-soft">
+        No users found. Run <Mono>npm run setup</Mono> to create the database
+        and seed data.
       </Card>
     );
   }
 
+  const selected = users.find((user) => user.id === userId);
+
   return (
-    <Card className="space-y-4 p-4">
-      <label className="block text-sm font-medium text-slate-700">
-        Sign in as
-        <select
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-        >
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.name} — {user.roleLabel} ({user.email})
-            </option>
-          ))}
-        </select>
+    <Card className="p-5 shadow-pop">
+      <h2 className="text-sm font-semibold text-ink">Sign in</h2>
+      <p className="mt-1 text-sm text-ink-muted">
+        No password: this POC simulates a service-principal login.
+      </p>
+
+      <label
+        htmlFor="userId"
+        className="mt-5 block text-xs font-medium tracking-wide text-ink-muted uppercase"
+      >
+        Identity
       </label>
+      <select
+        id="userId"
+        className="mt-1.5 w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink focus:border-brand-500"
+        value={userId}
+        onChange={(e) => setUserId(e.target.value)}
+      >
+        {users.map((user) => (
+          <option key={user.id} value={user.id}>
+            {user.name} — {user.roleLabel} ({user.email})
+          </option>
+        ))}
+      </select>
+      {selected ? (
+        <p className="mt-2 text-xs text-ink-muted">
+          Signs in as <span className="text-ink-soft">{selected.email}</span>{" "}
+          with the {selected.roleLabel.toLowerCase()} role.
+        </p>
+      ) : null}
 
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
 
-      <Button onClick={signIn} disabled={pending}>
+      <Button className="mt-5 w-full" onClick={signIn} disabled={pending}>
         {pending ? "Signing in…" : "Sign in"}
       </Button>
     </Card>

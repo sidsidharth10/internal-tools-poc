@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { Card, PageHeader } from "@/components/ui";
+import { Card, Mono, PageHeader } from "@/components/ui";
 import { can } from "@/lib/policy";
 import { requireActor } from "@/lib/session";
 
@@ -11,9 +11,9 @@ export default async function AuditPage() {
 
   if (!can(actor, "audit.read")) {
     return (
-      <Card className="p-4 text-sm text-slate-700">
+      <Card className="p-5 text-sm text-ink-soft">
         The audit log is restricted to the admin role. Your role is{" "}
-        <span className="font-mono">{actor.role}</span>.
+        <Mono>{actor.role}</Mono>.
       </Card>
     );
   }
@@ -21,10 +21,11 @@ export default async function AuditPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Shared foundation"
         title="Audit Log"
         description="Every mutation across all three apps, written in the same transaction as the change itself. Admin only."
       />
-      <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+      <Suspense fallback={<p className="text-sm text-ink-muted">Loading…</p>}>
         <AuditTable />
       </Suspense>
     </div>

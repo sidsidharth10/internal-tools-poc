@@ -87,18 +87,27 @@ export function ResourceForm({
   }
 
   const inputClass =
-    "w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 disabled:bg-slate-100";
+    "w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted/70 focus:border-brand-500 disabled:bg-surface-muted disabled:text-ink-muted";
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-5">
       {fields.map((field) => (
-        <div key={field.name} className="space-y-1">
-          <label
-            htmlFor={field.name}
-            className="block text-sm font-medium text-slate-700"
-          >
-            {field.label}
-          </label>
+        <div
+          key={field.name}
+          className={
+            field.type === "checkbox"
+              ? "flex items-start gap-3 rounded-lg border border-line bg-surface-muted px-3 py-2.5"
+              : "space-y-1.5"
+          }
+        >
+          {field.type === "checkbox" ? null : (
+            <label
+              htmlFor={field.name}
+              className="block text-sm font-medium text-ink"
+            >
+              {field.label}
+            </label>
+          )}
 
           {field.type === "textarea" ? (
             <textarea
@@ -149,37 +158,50 @@ export function ResourceForm({
           ) : null}
 
           {field.type === "checkbox" ? (
-            <input
-              id={field.name}
-              name={field.name}
-              type="checkbox"
-              disabled={field.disabled}
-              className="h-4 w-4 rounded border-slate-300"
-              checked={Boolean(values[field.name])}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, [field.name]: e.target.checked }))
-              }
-            />
+            <>
+              <input
+                id={field.name}
+                name={field.name}
+                type="checkbox"
+                disabled={field.disabled}
+                className="mt-0.5 h-4 w-4 rounded border-line-strong accent-brand-600"
+                checked={Boolean(values[field.name])}
+                onChange={(e) =>
+                  setValues((v) => ({ ...v, [field.name]: e.target.checked }))
+                }
+              />
+              <label
+                htmlFor={field.name}
+                className="text-sm font-medium text-ink"
+              >
+                {field.label}
+                {field.help ? (
+                  <span className="mt-0.5 block text-xs font-normal text-ink-muted">
+                    {field.help}
+                  </span>
+                ) : null}
+              </label>
+            </>
           ) : null}
 
-          {field.help ? (
-            <p className="text-xs text-slate-500">{field.help}</p>
+          {field.help && field.type !== "checkbox" ? (
+            <p className="text-xs text-ink-muted">{field.help}</p>
           ) : null}
         </div>
       ))}
 
       {error ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </p>
       ) : null}
       {saved && !redirectTo ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           Saved.
         </p>
       ) : null}
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 border-t border-line pt-4">
         <Button type="submit" disabled={submitting}>
           {submitting ? "Saving…" : submitLabel}
         </Button>

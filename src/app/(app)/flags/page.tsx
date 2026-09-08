@@ -15,6 +15,7 @@ export default async function FlagsPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Application 1"
         title="Feature Flags"
         description="Every role can read flags. Writes require ops or admin; deletes require admin. The buttons below are hidden accordingly, but the same rules are enforced in /api/feature-flags."
         actions={
@@ -25,7 +26,7 @@ export default async function FlagsPage() {
           ) : null
         }
       />
-      <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+      <Suspense fallback={<p className="text-sm text-ink-muted">Loading…</p>}>
         <FlagsTable canWrite={canWrite} canDelete={canDelete} />
       </Suspense>
     </div>

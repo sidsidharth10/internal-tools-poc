@@ -22,7 +22,7 @@ const columns: Column<AuditRow>[] = [
     header: "When",
     sortable: true,
     render: (row) => (
-      <span className="whitespace-nowrap text-sm text-slate-600">
+      <span className="tabular whitespace-nowrap text-ink-soft">
         {new Date(row.createdAt).toLocaleString()}
       </span>
     ),
@@ -31,24 +31,28 @@ const columns: Column<AuditRow>[] = [
     key: "actor",
     header: "Actor",
     render: (row) => (
-      <span className="text-sm">
-        {row.actor.name}{" "}
-        <span className="text-slate-500">({row.actor.role})</span>
+      <span className="whitespace-nowrap">
+        <span className="text-ink">{row.actor.name}</span>{" "}
+        <span className="text-ink-muted">({row.actor.role})</span>
       </span>
     ),
   },
   {
     key: "action",
     header: "Action",
-    render: (row) => <span className="font-mono text-xs">{row.action}</span>,
+    render: (row) => (
+      <span className="font-mono text-xs text-ink">{row.action}</span>
+    ),
   },
   {
     key: "entity",
     header: "Entity",
     render: (row) => (
-      <span className="text-sm">
-        <Badge>{row.entityType}</Badge>{" "}
-        <span className="font-mono text-xs text-slate-500">{row.entityId}</span>
+      <span className="flex flex-col gap-1">
+        <Badge>{row.entityType}</Badge>
+        <span className="font-mono text-[0.7rem] text-ink-muted">
+          {row.entityId}
+        </span>
       </span>
     ),
   },
@@ -58,19 +62,21 @@ const columns: Column<AuditRow>[] = [
     render: (row) => {
       const changes = diffSnapshots(row.before, row.after);
       if (changes.length === 0) {
-        return <span className="text-xs text-slate-500">—</span>;
+        return <span className="text-xs text-ink-muted">—</span>;
       }
       return (
-        <ul className="space-y-0.5 text-xs text-slate-600">
+        <ul className="space-y-0.5 text-xs text-ink-soft">
           {changes.slice(0, 4).map((change) => (
             <li key={change.field}>
-              <span className="font-medium">{change.field}</span>:{" "}
-              {JSON.stringify(change.from) ?? "—"} →{" "}
-              {JSON.stringify(change.to) ?? "—"}
+              <span className="font-medium text-ink">{change.field}</span>{" "}
+              <span className="text-ink-muted line-through">
+                {JSON.stringify(change.from) ?? "—"}
+              </span>{" "}
+              → {JSON.stringify(change.to) ?? "—"}
             </li>
           ))}
           {changes.length > 4 ? (
-            <li className="text-slate-400">+{changes.length - 4} more</li>
+            <li className="text-ink-muted">+{changes.length - 4} more</li>
           ) : null}
         </ul>
       );
