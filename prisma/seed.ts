@@ -81,6 +81,17 @@ const REFUND_REASONS = [
   "Chargeback reversal",
 ] as const;
 const REFUND_STATUSES = ["pending", "approved", "denied"] as const;
+
+/**
+ * Fixed pending refunds either side of the $500 ops decision limit, so the
+ * boundary is reachable without hand-editing the database. Searching the
+ * refunds table for "CUS-000" returns exactly these three.
+ */
+const BOUNDARY_REFUNDS = [
+  { customerRef: "CUS-000499", amountCents: 49_999 },
+  { customerRef: "CUS-000500", amountCents: 50_000 },
+  { customerRef: "CUS-000510", amountCents: 51_000 },
+] as const;
 const KYC_STATUSES = ["pending", "under_review", "approved", "rejected"] as const;
 const COUNTRIES = ["GB", "US", "DE", "NG", "IN", "BR", "SG", "AE"] as const;
 const DOCUMENT_TYPES = ["passport", "national_id", "drivers_licence"] as const;
@@ -151,6 +162,19 @@ async function main() {
         : null,
     };
   });
+
+  refunds.push(
+    ...BOUNDARY_REFUNDS.map(({ customerRef, amountCents }) => ({
+      customerRef,
+      amountCents,
+      reason: REFUND_REASONS[0],
+      status: "pending" as const,
+      requestedAt: new Date(Date.UTC(2025, 7, 31, 9, 0, 0)),
+      decidedById: null,
+      decidedByName: null,
+      decidedAt: null,
+    })),
+  );
 
   for (let i = 0; i < refunds.length; i += 500) {
     await prisma.refundRequest.createMany({ data: refunds.slice(i, i + 500) });
