@@ -46,7 +46,7 @@ export default async function FlagDetailPage({
       <Card className="p-5">
         {!canWrite ? (
           <p className="mb-4 rounded-lg border border-line bg-surface-muted px-3 py-2 text-sm text-ink-soft">
-            Read-only: your role ({actor.role}) cannot modify feature flags.
+            You have read-only access to feature flags.
           </p>
         ) : null}
         <ResourceForm

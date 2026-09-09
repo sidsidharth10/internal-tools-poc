@@ -9,7 +9,6 @@ import {
   Callout,
   Card,
   CardHeader,
-  Mono,
   PageHeader,
 } from "@/components/ui";
 import { listEntityAuditTrail } from "@/lib/data/audit-log";
@@ -55,7 +54,7 @@ export default async function KycDetailPage({
       <PageHeader
         eyebrow="KYC Review"
         title={applicant.fullName}
-        description={`Applicant ${applicant.id}`}
+        description={`Submitted ${new Date(applicant.submittedAt).toLocaleDateString()}`}
         actions={
           <Link href="/kyc">
             <Button variant="secondary" size="sm">
@@ -68,15 +67,12 @@ export default async function KycDetailPage({
       <Card>
         <CardHeader
           title="Applicant record"
-          description={
-            result.visibility === "full"
-              ? "Full record: your role is permitted every column."
-              : "Summary record: the sensitive columns are never selected for your role."
-          }
           actions={
-            <Badge tone={result.visibility === "full" ? "green" : "amber"} dot>
-              {result.visibility === "full" ? "full detail" : "redacted"}
-            </Badge>
+            result.visibility === "full" ? null : (
+              <Badge tone="amber" dot>
+                limited view
+              </Badge>
+            )
           }
         />
         <dl className="grid gap-x-8 gap-y-3 px-5 py-4 sm:grid-cols-2">
@@ -119,29 +115,17 @@ export default async function KycDetailPage({
       </Card>
 
       {result.visibility === "redacted" ? (
-        <Callout tone="warn" title="Redacted at the query layer">
+        <Callout tone="warn" title="Limited view">
           <p>
-            Date of birth, country, document type, document reference and risk
-            notes are absent from the API response for role {actor.role}:{" "}
-            <Mono>GET /api/kyc/{applicant.id}</Mono> selects only id, fullName,
-            status and submittedAt, so those columns are never read from the
-            database. Nothing is being hidden here by the page.
+            Date of birth, country, document details and risk notes are only
+            available to compliance and admin roles.
           </p>
         </Callout>
       ) : null}
 
       {can(actor, "kyc.decide") ? (
         <Card>
-          <CardHeader
-            title="Decision"
-            description={
-              <>
-                Requires <Mono>kyc.decide</Mono>; every change is written
-                through the audited mutation path as{" "}
-                <Mono>kyc.status_change</Mono>.
-              </>
-            }
-          />
+          <CardHeader title="Decision" />
           <div className="px-5 py-4">
             <StatusControl id={applicant.id} current={applicant.status} />
           </div>

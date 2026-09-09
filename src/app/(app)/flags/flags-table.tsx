@@ -42,7 +42,7 @@ export function FlagsTable({
     const response = await fetch(url, init);
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      setError(body.error ?? `Request failed (${response.status})`);
+      setError(body.error ?? "Something went wrong. Please try again.");
       return;
     }
     reload();
@@ -88,7 +88,9 @@ export function FlagsTable({
           size="sm"
           className="w-12"
           disabled={!canWrite}
-          title={canWrite ? undefined : "Your role cannot modify flags"}
+          title={
+            canWrite ? undefined : "You have read-only access to feature flags"
+          }
           onClick={() =>
             mutate(
               `/api/feature-flags/${row.id}`,
@@ -160,7 +162,11 @@ export function FlagsTable({
         defaultSort={{ key: "updatedAt", dir: "desc" }}
         columns={columns}
         filters={[
-          { type: "search", key: "search", placeholder: "Key, name or description" },
+          {
+            type: "search",
+            key: "search",
+            placeholder: "Key, name or description",
+          },
           {
             type: "select",
             key: "environment",

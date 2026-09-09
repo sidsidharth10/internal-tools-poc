@@ -30,7 +30,7 @@ export function StatusControl({
 
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      setError(body.error ?? `Request failed (${response.status})`);
+      setError(body.error ?? "Something went wrong. Please try again.");
       return;
     }
     router.refresh();

@@ -1,4 +1,4 @@
-import { OPS_REFUND_LIMIT_CENTS, type Role } from "@/lib/domain";
+import { OPS_REFUND_LIMIT_CENTS, formatCents, type Role } from "@/lib/domain";
 
 export type ActorContext = {
   id: string;
@@ -25,6 +25,20 @@ export const PERMISSIONS = [
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
+
+/** Used in the messages callers see, so refusals read as English rather than as permission keys. */
+const PERMISSION_LABELS: Record<Permission, string> = {
+  "flags.read": "view feature flags",
+  "flags.write": "change feature flags",
+  "flags.delete": "delete feature flags",
+  "refunds.read": "view refunds",
+  "refunds.decide.limited": "decide refunds",
+  "refunds.decide.any": "decide refunds",
+  "kyc.read.full": "view applicant details",
+  "kyc.read.redacted": "view the KYC queue",
+  "kyc.decide": "change an applicant's status",
+  "audit.read": "view the audit log",
+};
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   admin: [
@@ -89,7 +103,7 @@ export function requirePermission(
 ): void {
   if (!can(actor, permission)) {
     throw new ForbiddenError(
-      `Role "${actor.role}" is not permitted to ${permission}`,
+      `You do not have permission to ${PERMISSION_LABELS[permission]}.`,
     );
   }
 }
@@ -106,16 +120,12 @@ export function assertCanDecideRefund(
   if (can(actor, "refunds.decide.any")) return;
 
   if (!can(actor, "refunds.decide.limited")) {
-    throw new ForbiddenError(
-      `Role "${actor.role}" has read-only access to refunds`,
-    );
+    throw new ForbiddenError("You have read-only access to refunds.");
   }
 
   if (amountCents >= OPS_REFUND_LIMIT_CENTS) {
     throw new ForbiddenError(
-      `Role "${actor.role}" may only decide refunds under ${
-        OPS_REFUND_LIMIT_CENTS / 100
-      } USD; this request is for ${amountCents / 100} USD`,
+      `This refund is above your ${formatCents(OPS_REFUND_LIMIT_CENTS)} approval limit and needs an admin.`,
     );
   }
 }

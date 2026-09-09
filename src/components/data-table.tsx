@@ -80,7 +80,6 @@ export function DataTable<T>({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [nonce, setNonce] = useState(0);
-  const [lastUrl, setLastUrl] = useState("");
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
@@ -96,22 +95,21 @@ export function DataTable<T>({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setLastUrl(requestUrl);
 
     fetch(requestUrl, { headers: { accept: "application/json" } })
       .then(async (response) => {
         const body = await response.json();
         if (cancelled) return;
         if (!response.ok) {
-          setError(body.error ?? `Request failed (${response.status})`);
+          setError(body.error ?? "Something went wrong. Please try again.");
           setData(null);
           return;
         }
         setError(null);
         setData(body);
       })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(String(e));
+      .catch(() => {
+        if (!cancelled) setError("Could not load this list. Please try again.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -228,7 +226,9 @@ export function DataTable<T>({
                   </td>
                 </tr>
               ) : null}
-              {!error && loading && !data ? <SkeletonRows columns={columns} /> : null}
+              {!error && loading && !data ? (
+                <SkeletonRows columns={columns} />
+              ) : null}
               {!error && data?.rows.length === 0 ? (
                 <tr>
                   <td colSpan={columns.length} className="px-4 py-14">
@@ -311,14 +311,6 @@ export function DataTable<T>({
           </div>
         </div>
       </div>
-
-      <p
-        className="truncate text-xs text-ink-muted"
-        title="The request the browser actually made — filtering happens in SQL, not in the browser."
-      >
-        <span className="font-medium">Request</span>{" "}
-        <code className="font-mono">GET {lastUrl}</code>
-      </p>
     </div>
   );
 }

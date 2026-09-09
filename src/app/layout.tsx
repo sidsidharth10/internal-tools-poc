@@ -16,9 +16,8 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Internal Tools POC",
-  description:
-    "Role-scoped internal tooling proof-of-concept: feature flags, refunds and KYC review.",
+  title: "Internal Tools",
+  description: "Feature flags, refunds and KYC review.",
 };
 
 export default function RootLayout({

@@ -37,7 +37,7 @@ function Brand() {
         <span className="block text-sm font-semibold text-ink">
           Internal Tools
         </span>
-        <span className="block text-xs text-ink-muted">Role-scoped POC</span>
+        <span className="block text-xs text-ink-muted">Operations</span>
       </span>
     </Link>
   );
@@ -70,9 +70,10 @@ export function NavShell({
   actor: ActorContext;
   children: React.ReactNode;
 }) {
-  const items: NavItem[] = can(actor, "audit.read")
-    ? [...BASE_ITEMS, { href: "/audit", label: "Audit Log", icon: "audit" }]
-    : BASE_ITEMS;
+  const adminItems: NavItem[] = can(actor, "audit.read")
+    ? [{ href: "/audit", label: "Audit Log", icon: "audit" }]
+    : [];
+  const items: NavItem[] = [...BASE_ITEMS, ...adminItems];
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)]">
@@ -80,14 +81,18 @@ export function NavShell({
         <Brand />
         <div className="mt-7">
           <p className="px-3 pb-2 text-[0.68rem] font-semibold tracking-[0.09em] text-ink-muted uppercase">
-            Applications
+            Tools
           </p>
-          <SidebarNav items={items} />
+          <SidebarNav items={BASE_ITEMS} />
         </div>
-        <div className="mt-auto rounded-card border border-line bg-canvas p-3 text-xs leading-5 text-ink-muted">
-          Roles resolve from the database on every request; the navigation only
-          reflects what the API would already allow.
-        </div>
+        {adminItems.length ? (
+          <div className="mt-6">
+            <p className="px-3 pb-2 text-[0.68rem] font-semibold tracking-[0.09em] text-ink-muted uppercase">
+              Administration
+            </p>
+            <SidebarNav items={adminItems} />
+          </div>
+        ) : null}
       </aside>
 
       <div className="flex min-h-screen flex-col">

@@ -6,12 +6,6 @@ import { getActor } from "@/lib/session";
 
 import { LoginForm } from "./login-form";
 
-const HIGHLIGHTS = [
-  "Feature flags with full CRUD and server-side search",
-  "5,200 refunds with value-gated approvals",
-  "KYC review with redaction enforced in the query",
-] as const;
-
 export default async function LoginPage() {
   if (await getActor()) redirect("/");
 
@@ -38,26 +32,12 @@ export default async function LoginPage() {
             </span>
           </div>
           <h1 className="mt-6 text-3xl leading-10 font-semibold text-ink">
-            Three internal tools,
-            <br />
-            one enforced foundation.
+            Sign in to Internal Tools
           </h1>
           <p className="mt-3 max-w-md text-sm leading-6 text-ink-soft">
-            Sign in as one of the seeded service identities. This stands in for
-            a real identity provider: the cookie carries only a user id, and the
-            role is re-read from the database on every request.
+            Feature flags, refunds and KYC review. What you can see and do
+            depends on your role.
           </p>
-          <ul className="mt-6 space-y-2">
-            {HIGHLIGHTS.map((item) => (
-              <li
-                key={item}
-                className="flex items-start gap-2.5 text-sm text-ink-soft"
-              >
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
-                {item}
-              </li>
-            ))}
-          </ul>
         </div>
 
         <LoginForm users={users} />
