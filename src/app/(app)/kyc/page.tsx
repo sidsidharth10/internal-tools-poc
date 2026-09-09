@@ -13,12 +13,11 @@ export default async function KycPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Application 3"
-        title="KYC Review Queue"
+        title="KYC Review"
         description={
           full
-            ? "Your role reads the full applicant record, including date of birth, document reference and risk notes."
-            : "Your role reads name, status and submission date only: /api/kyc selects those four columns and never queries the sensitive ones."
+            ? "Applicants awaiting identity verification."
+            : "Applicants awaiting identity verification. Your role sees name and status only."
         }
       />
       <Suspense fallback={<p className="text-sm text-ink-muted">Loading…</p>}>

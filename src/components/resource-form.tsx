@@ -76,7 +76,7 @@ export function ResourceForm({
                   `${issue.path.join(".")}: ${issue.message}`,
               )
               .join(", ")
-          : (body.error ?? `Request failed (${response.status})`),
+          : (body.error ?? "Something went wrong. Please try again."),
       );
       return;
     }

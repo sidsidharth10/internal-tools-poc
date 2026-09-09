@@ -53,7 +53,7 @@ export type KycVisibility = "full" | "redacted";
 function resolveVisibility(actor: ActorContext): KycVisibility {
   if (can(actor, "kyc.read.full")) return "full";
   if (can(actor, "kyc.read.redacted")) return "redacted";
-  throw new ForbiddenError(`Role "${actor.role}" is not permitted to read KYC applicants`);
+  throw new ForbiddenError("You do not have permission to view the KYC queue.");
 }
 
 const SORTABLE = ["submittedAt", "status", "fullName"] as const;

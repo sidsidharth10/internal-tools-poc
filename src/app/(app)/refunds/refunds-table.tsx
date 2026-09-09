@@ -75,11 +75,7 @@ export function RefundsTable({
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        setError(
-          `${response.status} from /api/refunds/${row.id}/decision — ${
-            body.error ?? "Request failed"
-          }`,
-        );
+        setError(body.error ?? "That refund could not be decided.");
         return;
       }
       reload();
@@ -159,13 +155,13 @@ export function RefundsTable({
         }
 
         const readOnly = !canDecideAny && !canDecideLimited;
-        // Over-limit rows stay clickable on purpose: the demo needs the server to
-        // be the thing that refuses, with its own message.
+        // Over-limit rows stay clickable on purpose: the server is the thing that
+        // refuses, and its message is what the operator sees.
         const overLimit = !readOnly && !decidableLocally(row.amountCents);
         const title = readOnly
-          ? "Your role has read-only access to refunds"
+          ? "You have read-only access to refunds"
           : overLimit
-            ? `Over the ${formatCents(OPS_REFUND_LIMIT_CENTS)} limit for your role — the API will refuse this`
+            ? `Above your ${formatCents(OPS_REFUND_LIMIT_CENTS)} approval limit`
             : undefined;
         const disabled = readOnly || pending === row.id;
 
@@ -215,7 +211,12 @@ export function RefundsTable({
               label: status,
             })),
           },
-          { type: "number", key: "minAmount", label: "Min $", placeholder: "0" },
+          {
+            type: "number",
+            key: "minAmount",
+            label: "Min $",
+            placeholder: "0",
+          },
           {
             type: "number",
             key: "maxAmount",
@@ -260,7 +261,7 @@ function SummaryTiles({ refreshKey }: { refreshKey: number }) {
       <Stat
         label="Matching"
         value={summary.total.toLocaleString()}
-        hint="Counted by SQL for the current filter"
+        hint="For the current filter"
       />
       <Stat
         label="Pending"

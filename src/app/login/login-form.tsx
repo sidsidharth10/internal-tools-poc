@@ -53,14 +53,14 @@ export function LoginForm({ users }: { users: LoginUser[] }) {
     <Card className="p-5 shadow-pop">
       <h2 className="text-sm font-semibold text-ink">Sign in</h2>
       <p className="mt-1 text-sm text-ink-muted">
-        No password: this POC simulates a service-principal login.
+        Continue with your work account.
       </p>
 
       <label
         htmlFor="userId"
         className="mt-5 block text-xs font-medium tracking-wide text-ink-muted uppercase"
       >
-        Identity
+        Account
       </label>
       <select
         id="userId"

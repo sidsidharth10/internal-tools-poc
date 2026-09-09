@@ -15,9 +15,8 @@ export default async function FlagsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Application 1"
         title="Feature Flags"
-        description="Every role can read flags. Writes require ops or admin; deletes require admin. The buttons below are hidden accordingly, but the same rules are enforced in /api/feature-flags."
+        description="Runtime configuration across dev, staging and production."
         actions={
           canWrite ? (
             <Link href="/flags/new">

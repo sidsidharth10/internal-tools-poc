@@ -15,33 +15,22 @@ export default async function RefundsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Application 2"
-        title="Refunds Dashboard"
-        description={`5,200 seeded requests, filtered, sorted, counted and paginated in SQL. Deciding a refund is gated on role and on value: ops under ${formatCents(
-          OPS_REFUND_LIMIT_CENTS,
-        )}, admin any amount, compliance never — and only while the request is still pending.`}
+        title="Refunds"
+        description="Review and decide customer refund requests."
       />
 
       {!canDecideAny && !canDecideLimited ? (
-        <Callout title="Read-only">
-          <p>
-            Your role may read refunds but not decide them. The buttons are
-            disabled, and <code>POST /api/refunds/:id/decision</code> returns 403
-            regardless of what the UI shows.
-          </p>
+        <Callout title="Read-only access">
+          <p>You can review refunds but not approve or deny them.</p>
         </Callout>
       ) : null}
 
       {canDecideLimited ? (
         <Callout
           tone="warn"
-          title={`Decision limit: ${formatCents(OPS_REFUND_LIMIT_CENTS)}`}
+          title={`Approval limit ${formatCents(OPS_REFUND_LIMIT_CENTS)}`}
         >
-          <p>
-            Approve and Deny stay clickable on larger requests on purpose. The
-            API is what refuses them, and its 403 message is shown above the
-            table.
-          </p>
+          <p>Requests at or above your limit have to go to an admin.</p>
         </Callout>
       ) : null}
 

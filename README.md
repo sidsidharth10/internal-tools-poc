@@ -116,8 +116,8 @@ before/after snapshots. Entity detail pages show the same trail scoped to one ro
 `src/components/data-table.tsx` keeps all filter, sort and pagination state in the
 URL, sends it verbatim to an API route, and renders whatever comes back. Filtering,
 sorting, counting and pagination all happen in SQL against indexed columns; the
-browser never holds more than one page of rows. The exact request URL is shown
-under each table so it is visible in a demo.
+browser never holds more than one page of rows. The request is visible in the
+network tab, and the filter state is shareable as a URL.
 
 The refunds table is seeded with 5,200 rows specifically so this is demonstrable
 at a volume where a client-side approach would fall over.
