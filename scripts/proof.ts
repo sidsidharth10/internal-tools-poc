@@ -197,6 +197,25 @@ async function main() {
   const repeat = await decide(admin, largeRefund.id, "approved");
   record("admin re-decides an already-denied refund", "409", String(repeat.status));
 
+  // 10b. The limit is exclusive: the seeded pair either side of it proves the
+  // boundary itself, not just amounts far from it.
+  const atLimit = await prisma.refundRequest.findFirstOrThrow({
+    where: { customerRef: "CUS-000500" },
+  });
+  const belowLimit = await prisma.refundRequest.findFirstOrThrow({
+    where: { customerRef: "CUS-000499" },
+  });
+  record(
+    "ops decides a refund of exactly $500.00",
+    "403",
+    String((await decide(ops, atLimit.id, "approved")).status),
+  );
+  record(
+    "ops decides a refund of $499.99",
+    "200",
+    String((await decide(ops, belowLimit.id, "approved")).status),
+  );
+
   // 11. The transition is in the audit log, with before/after snapshots.
   const decisionLog = await prisma.auditLog.findFirst({
     where: { entityType: "RefundRequest", entityId: largeRefund.id },

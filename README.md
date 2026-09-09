@@ -125,8 +125,13 @@ at a volume where a client-side approach would fall over.
 ### 5. Seed data
 
 `npm run seed` loads a deterministic dataset (fixed PRNG, same data every run):
-5 users, 54 feature flags, 5,200 refund requests with a realistic long-tail
+5 users, 54 feature flags, 5,203 refund requests with a realistic long-tail
 amount distribution, and 80 KYC applicants.
+
+Three of those refunds are fixed rather than random — `CUS-000499` ($499.99),
+`CUS-000500` ($500.00) and `CUS-000510` ($510.00), all pending. They sit either
+side of the `ops` decision limit so the boundary is reachable from the UI and
+from `npm run proof` without editing the database.
 
 ## The three apps
 
